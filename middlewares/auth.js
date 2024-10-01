@@ -6,13 +6,18 @@ const checkAuth = async (req, res, next) => {
   const authHeader = req.headers["authorization"];
 
   if (!authHeader) {
-    throw new Error("Access denied: No authorization header is present");
+    const error = new Error(
+      "Access denied: No authorization header is present"
+    );
+    error.status = 401;
+    return next(error);
   }
 
   const token = authHeader.replace("Bearer ", "");
-  console.log(token);
   if (!token) {
-    throw new Error("Access denied: No token provided");
+    const error = new Error("Access denied: No token provided");
+    error.status = 401;
+    return next(error);
   }
 
   try {
@@ -24,11 +29,15 @@ const checkAuth = async (req, res, next) => {
       req.user = user;
       next();
     } else {
-      throw new Error("User not found");
+      const error = new Error("User not found");
+      error.status = 404;
+      return next(error);
     }
   } catch (error) {
     console.log(error);
-    throw new Error("Invalid or expired token");
+    const customError = new Error("Invalid or expired token");
+    customError.status = 401;
+    return next(customError);
   }
 };
 
