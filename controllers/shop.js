@@ -96,7 +96,10 @@ exports.addToCart = async (req, res, next) => {
       });
     }
 
-    cart.totalAmount += product.price * quantity;
+    cart.totalAmount =
+      parseFloat(cart.totalAmount) +
+      parseFloat((product.price * quantity).toFixed(2));
+
     await cart.save();
 
     let cartItems = await CartItem.findAll({
@@ -107,7 +110,7 @@ exports.addToCart = async (req, res, next) => {
     res.status(200).json({
       message: "Product added to cart successfully!",
       cart: {
-        items: cartItems,
+        cartItems,
         totalAmount: cart.totalAmount,
       },
     });
@@ -138,7 +141,10 @@ exports.deleteFromCart = async (req, res, next) => {
 
     let product = await Product.findByPk(productId);
 
-    cart.totalAmount -= product.price * cartItem.quantity;
+    cart.totalAmount =
+      parseFloat(cart.totalAmount) -
+      parseFloat((product.price * cartItem.quantity).toFixed(2));
+
     await cart.save();
     await cartItem.destroy();
 
@@ -150,7 +156,7 @@ exports.deleteFromCart = async (req, res, next) => {
     res.status(200).json({
       message: "Product removed from cart successfully!",
       cart: {
-        cartItems: cartItems,
+        cartItems,
         totalAmount: cart.totalAmount,
       },
     });
@@ -187,7 +193,10 @@ exports.changeQuantityOfCartItem = async (req, res, next) => {
 
     let product = await Product.findByPk(productId);
 
-    cart.totalAmount += product.price * (quantity - cartItem.quantity);
+    cart.totalAmount =
+      parseFloat(cart.totalAmount) +
+      parseFloat((product.price * (quantity - cartItem.quantity)).toFixed(2));
+
     await cart.save();
 
     cartItem.quantity = quantity;
@@ -201,7 +210,7 @@ exports.changeQuantityOfCartItem = async (req, res, next) => {
     res.status(200).json({
       message: "Updated product quantity in the cart successfully!",
       cart: {
-        cartItems: cartItems,
+        cartItems,
         totalAmount: cart.totalAmount,
       },
     });

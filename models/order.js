@@ -2,9 +2,10 @@ const { DataTypes } = require("sequelize");
 const sequelize = require("../utils/database");
 
 const User = require("./user");
+const Address = require("./address");
 
-const Cart = sequelize.define(
-  "cart",
+const Order = sequelize.define(
+  "order",
   {
     id: {
       type: DataTypes.INTEGER,
@@ -18,15 +19,22 @@ const Cart = sequelize.define(
         model: User,
         key: "id",
       },
-      index: true,
     },
     totalAmount: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
       defaultValue: 0,
     },
+    addressId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: Address,
+        key: "id",
+      },
+    },
   },
   { timestamps: true }
 );
 
-module.exports = Cart;
+module.exports = Order;

@@ -2,21 +2,21 @@ const { DataTypes } = require("sequelize");
 const sequelize = require("../utils/database");
 
 const Product = require("./product");
-const Cart = require("./cart");
+const Order = require("./order");
 
-const CartItem = sequelize.define(
-  "cartItem",
+const OrderItem = sequelize.define(
+  "orderItem",
   {
     id: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
     },
-    cartId: {
+    orderId: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: Cart,
+        model: Order,
         key: "id",
       },
     },
@@ -32,15 +32,12 @@ const CartItem = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
     },
+    price: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+    },
   },
-  {
-    timestamps: true,
-    indexes: [
-      {
-        fields: ["cartId", "productId"],
-      },
-    ],
-  }
+  { timestamps: true }
 );
 
-module.exports = CartItem;
+module.exports = OrderItem;

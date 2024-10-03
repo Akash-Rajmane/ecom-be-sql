@@ -6,9 +6,13 @@ const Product = require("./models/product");
 const User = require("./models/user");
 const Cart = require("./models/cart");
 const CartItem = require("./models/cart-item");
+const Order = require("./models/order");
+const OrderItem = require("./models/order-item");
+const Address = require("./models/address");
 
 const shopRoutes = require("./routes/shop");
 const userRoutes = require("./routes/user");
+const orderRoutes = require("./routes/order");
 
 const app = express();
 
@@ -28,6 +32,7 @@ app.use((req, res, next) => {
 
 app.use("/api/shop", shopRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/order", orderRoutes);
 
 User.hasOne(Cart);
 Cart.belongsTo(User);
@@ -37,6 +42,21 @@ CartItem.belongsTo(Cart, { foreignKey: "cartId" });
 
 CartItem.belongsTo(Product, { foreignKey: "productId" });
 Product.hasMany(CartItem, { foreignKey: "productId" });
+
+User.hasMany(Order);
+Order.belongsTo(User);
+
+Order.hasMany(OrderItem, { foreignKey: "orderId" });
+OrderItem.belongsTo(Order, { foreignKey: "orderId" });
+
+OrderItem.belongsTo(Product, { foreignKey: "productId" });
+Product.hasMany(OrderItem, { foreignKey: "productId" });
+
+User.hasMany(Address, { foreignKey: "userId" });
+Address.belongsTo(User, { foreignKey: "userId" });
+
+Order.belongsTo(Address, { foreignKey: "addressId" });
+Address.hasMany(Order, { foreignKey: "addressId" });
 
 // Global error-handling middleware
 app.use((err, req, res, next) => {
