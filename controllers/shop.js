@@ -34,6 +34,7 @@ exports.getProduct = async (req, res, next) => {
   }
 };
 
+/*
 exports.getCartItems = async (req, res, next) => {
   try {
     let cartDetails = await Cart.findOne({
@@ -59,6 +60,42 @@ exports.getCartItems = async (req, res, next) => {
     }
 
     res.status(200).json({ cartDetails });
+  } catch (err) {
+    console.log("Error fetching cart items:", err);
+    res.status(500).json({ message: "Failed to retrieve cart items" });
+  }
+};
+*/
+
+exports.getCart = async (req, res, next) => {
+  try {
+    // Fetch cart details from the view
+    let cartDetails = await sequelize.query(
+      "SELECT * FROM v_cartdetails WHERE userId = :userId",
+      {
+        replacements: { userId: req.user.id },
+        type: sequelize.QueryTypes.SELECT,
+      }
+    );
+
+    if (!cartDetails || cartDetails.length === 0) {
+      return res.status(404).json({ message: "No cart details found" });
+    }
+
+    // Calculate the total amount for the cart
+    const totalAmount = await sequelize.query(
+      "SELECT CalculateCartTotalAmount(:cartId) AS totalAmount",
+      {
+        replacements: { cartId: cartDetails[0].cartId },
+        type: sequelize.QueryTypes.SELECT,
+      }
+    );
+
+    // Add total amount to the response
+    res.status(200).json({
+      cartDetails,
+      totalAmount: totalAmount[0].totalAmount,
+    });
   } catch (err) {
     console.log("Error fetching cart items:", err);
     res.status(500).json({ message: "Failed to retrieve cart items" });
