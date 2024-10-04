@@ -3,9 +3,12 @@ const Cart = require("../models/cart");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
+const sequelize = require("../utils/database");
 
 const signup = async (req, res) => {
   const { name, email, password } = req.body;
+  let t;
+
   try {
     if (!name || !email || !password) {
       return res
@@ -22,22 +25,32 @@ const signup = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const newUser = await User.create({
-      name,
-      email,
-      password: hashedPassword,
-    });
+    t = await sequelize.transaction();
 
-    await Cart.create({
-      userId: newUser.id,
-      totalAmount: 0,
-    });
+    const newUser = await User.create(
+      {
+        name,
+        email,
+        password: hashedPassword,
+      },
+      { transaction: t }
+    );
+
+    await Cart.create(
+      {
+        userId: newUser.id,
+        totalAmount: 0,
+      },
+      { transaction: t }
+    );
 
     const token = jwt.sign(
       { userId: newUser.id, email: newUser.email },
       process.env.JWT_SECRET,
       { expiresIn: "1h" }
     );
+
+    await t.commit();
 
     res.status(201).json({
       message: "User created successfully",
@@ -46,6 +59,7 @@ const signup = async (req, res) => {
     });
   } catch (err) {
     console.error(err);
+    if (t) await t.rollback();
     res.status(500).json({ error: "Internal server error" });
   }
 };

@@ -1,6 +1,7 @@
 const Product = require("../models/product");
 const Cart = require("../models/cart");
 const CartItem = require("../models/cart-item");
+const sequelize = require("../utils/database");
 
 exports.getProducts = async (req, res, next) => {
   try {
@@ -66,11 +67,11 @@ exports.getCartItems = async (req, res, next) => {
 
 exports.addToCart = async (req, res, next) => {
   const { productId, quantity } = req.body;
-
+  let t;
   try {
     let cart = await Cart.findOne({ where: { userId: req.user.id } });
     if (!cart) {
-      cart = await Cart.create({ userId: req.user.id });
+      return res.status(404).json({ error: "Cart not found" });
     }
 
     let product = await Product.findByPk(productId);
@@ -85,27 +86,35 @@ exports.addToCart = async (req, res, next) => {
       },
     });
 
+    t = await sequelize.transaction();
+
     if (cartItem) {
       cartItem.quantity += quantity;
-      await cartItem.save();
+      await cartItem.save({ transaction: t });
     } else {
-      cartItem = await CartItem.create({
-        cartId: cart.id,
-        productId: productId,
-        quantity: quantity,
-      });
+      cartItem = await CartItem.create(
+        {
+          cartId: cart.id,
+          productId: productId,
+          quantity: quantity,
+        },
+        { transaction: t }
+      );
     }
 
     cart.totalAmount =
       parseFloat(cart.totalAmount) +
       parseFloat((product.price * quantity).toFixed(2));
 
-    await cart.save();
+    await cart.save({ transaction: t });
 
     let cartItems = await CartItem.findAll({
       where: { cartId: cart.id },
       include: [{ model: Product, attributes: ["id", "name", "price"] }],
+      transaction: t,
     });
+
+    await t.commit();
 
     res.status(200).json({
       message: "Product added to cart successfully!",
@@ -116,12 +125,14 @@ exports.addToCart = async (req, res, next) => {
     });
   } catch (err) {
     console.log(err);
+    if (t) await t.rollback();
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
 
 exports.deleteFromCart = async (req, res, next) => {
   let productId = req.params.productId;
+  let t;
   try {
     let cart = await Cart.findOne({ where: { userId: req.user.id } });
     if (!cart) {
@@ -139,19 +150,23 @@ exports.deleteFromCart = async (req, res, next) => {
       return res.status(404).json({ error: "Product not found in cart" });
     }
 
+    t = await sequelize.transaction();
     let product = await Product.findByPk(productId);
 
     cart.totalAmount =
       parseFloat(cart.totalAmount) -
       parseFloat((product.price * cartItem.quantity).toFixed(2));
 
-    await cart.save();
-    await cartItem.destroy();
+    await cart.save({ transaction: t });
+    await cartItem.destroy({ transaction: t });
 
     let cartItems = await CartItem.findAll({
       where: { cartId: cart.id },
       include: [{ model: Product, attributes: ["id", "name", "price"] }],
+      transaction: t,
     });
+
+    await t.commit();
 
     res.status(200).json({
       message: "Product removed from cart successfully!",
@@ -162,6 +177,7 @@ exports.deleteFromCart = async (req, res, next) => {
     });
   } catch (err) {
     console.log(err);
+    if (t) await t.rollback();
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
@@ -169,6 +185,7 @@ exports.deleteFromCart = async (req, res, next) => {
 exports.changeQuantityOfCartItem = async (req, res, next) => {
   let productId = req.params.productId;
   let { quantity } = req.body;
+  let t;
 
   if (isNaN(quantity) || quantity <= 0) {
     return res.status(400).json({ error: "Invalid quantity" });
@@ -191,21 +208,25 @@ exports.changeQuantityOfCartItem = async (req, res, next) => {
       return res.status(404).json({ error: "Product not found in cart" });
     }
 
+    t = await sequelize.transaction();
     let product = await Product.findByPk(productId);
 
     cart.totalAmount =
       parseFloat(cart.totalAmount) +
       parseFloat((product.price * (quantity - cartItem.quantity)).toFixed(2));
 
-    await cart.save();
+    await cart.save({ transaction: t });
 
     cartItem.quantity = quantity;
-    await cartItem.save();
+    await cartItem.save({ transaction: t });
 
     let cartItems = await CartItem.findAll({
       where: { cartId: cart.id },
       include: [{ model: Product, attributes: ["id", "name", "price"] }],
+      transaction: t,
     });
+
+    await t.commit();
 
     res.status(200).json({
       message: "Updated product quantity in the cart successfully!",
@@ -216,6 +237,7 @@ exports.changeQuantityOfCartItem = async (req, res, next) => {
     });
   } catch (err) {
     console.error("Error updating cart item quantity:", err);
+    if (t) await t.rollback();
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
