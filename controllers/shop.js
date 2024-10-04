@@ -35,7 +35,7 @@ exports.getProduct = async (req, res, next) => {
 };
 
 /*
-exports.getCartItems = async (req, res, next) => {
+exports.getCart = async (req, res, next) => {
   try {
     let cartDetails = await Cart.findOne({
       where: { userId: req.user.id },
